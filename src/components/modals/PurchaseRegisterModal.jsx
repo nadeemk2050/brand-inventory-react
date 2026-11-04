@@ -1,15 +1,13 @@
-
 import { useState, useMemo, useEffect } from "react";
 import { useData } from "../../context/DataContext";
 import { useAuth } from "../../context/AuthContext";
 import { useMessageBox } from "../../context/MessageBoxContext";
-import { FaEdit, FaTrash, FaSearch, FaList, FaArrowLeft, FaArrowRight, FaAngleDoubleLeft, FaAngleDoubleRight, FaCalendarAlt } from "react-icons/fa";
+import { FaEdit, FaTrash, FaSearch, FaArrowLeft, FaArrowRight, FaAngleDoubleLeft, FaAngleDoubleRight, FaCalendarAlt } from "react-icons/fa";
 import { doc, runTransaction } from "firebase/firestore";
 import { db } from "../../firebase";
-import DateFilterModal from "./DateFilterModal"; // Assuming in same folder or check path
 
 export default function PurchaseRegisterModal({ isOpen, onClose, onEditInvoice, onViewInvoice }) {
-    const { purchaseInvoices, products, appId } = useData();
+    const { purchaseInvoices, products, appId, dataScopeId, ownerId } = useData();
     const { currentUser } = useAuth();
     const { showMessageBox } = useMessageBox();
     const [searchTerm, setSearchTerm] = useState("");
@@ -22,6 +20,8 @@ export default function PurchaseRegisterModal({ isOpen, onClose, onEditInvoice, 
     const [dateFilter, setDateFilter] = useState({ type: 'all', value: null });
     const [activeDateModal, setActiveDateModal] = useState(null);
     const [showDateMenu, setShowDateMenu] = useState(false);
+
+    const targetScope = dataScopeId || ownerId || currentUser?.uid;
 
     // Reset page when filter/sort changes
     useEffect(() => {
@@ -36,7 +36,7 @@ export default function PurchaseRegisterModal({ isOpen, onClose, onEditInvoice, 
                 } else {
                     setActiveDateModal('single');
                 }
-                e.preventDefault(); // Prevent default browser action for F2
+                e.preventDefault();
             }
         }
         if (isOpen) {
@@ -81,7 +81,6 @@ export default function PurchaseRegisterModal({ isOpen, onClose, onEditInvoice, 
             let valA = a[sortConfig.key];
             let valB = b[sortConfig.key];
 
-            // Handle date specifically if needed, or string comparison
             if (sortConfig.key === 'date') {
                 valA = new Date(a.date || a.timestamp);
                 valB = new Date(b.date || b.timestamp);
@@ -98,8 +97,6 @@ export default function PurchaseRegisterModal({ isOpen, onClose, onEditInvoice, 
         return filtered;
     }, [purchaseInvoices, searchTerm, isOpen, sortConfig, dateFilter]);
 
-
-    // Display total quantity
     const totalQuantity = useMemo(() => {
         return filteredInvoices.reduce((total, inv) => {
             const items = inv.items || [];
@@ -120,13 +117,13 @@ export default function PurchaseRegisterModal({ isOpen, onClose, onEditInvoice, 
             async () => {
                 try {
                     await runTransaction(db, async (transaction) => {
-                        const invoiceRef = doc(db, `artifacts/${appId}/users/${currentUser.uid}/purchaseInvoices`, invoice.id);
+                        const invoiceRef = doc(db, `artifacts/${appId}/users/${targetScope}/purchaseInvoices`, invoice.id);
 
                         // 1. Prepare Reads
                         const productReads = [];
                         for (const item of invoice.items) {
                             if (!item.productId) continue;
-                            const productRef = doc(db, `artifacts/${appId}/users/${currentUser.uid}/products`, item.productId);
+                            const productRef = doc(db, `artifacts/${appId}/users/${targetScope}/products`, item.productId);
                             productReads.push({ ref: productRef, item });
                         }
 
@@ -152,12 +149,10 @@ export default function PurchaseRegisterModal({ isOpen, onClose, onEditInvoice, 
                 }
             },
             null,
-            true, // showPasswordInput
-            "abcd" // expectedPassword
+            true,
+            "abcd"
         );
     }
-
-
 
     return (
         <div className="modal-overlay" onClick={onClose} style={{ alignItems: 'flex-start' }}>
@@ -170,7 +165,7 @@ export default function PurchaseRegisterModal({ isOpen, onClose, onEditInvoice, 
                 display: 'flex',
                 flexDirection: 'column',
                 margin: 0,
-                backgroundColor: '#fff' // Ensure no transparency
+                backgroundColor: '#fff'
             }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', paddingRight: '40px' }}>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: '15px' }}>

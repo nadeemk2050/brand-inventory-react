@@ -6,7 +6,7 @@ import { doc, setDoc, addDoc, collection, updateDoc, deleteDoc, getDoc } from "f
 import { db } from "../../firebase";
 
 export default function ManageProductsModal({ isOpen, onClose, isOverlay = false, autoCloseOnAdd = false }) {
-    const { products, appId, purchaseInvoices, salesVouchers } = useData();
+    const { products, appId, dataScopeId, ownerId, purchaseInvoices, salesVouchers } = useData();
     const { currentUser } = useAuth();
     const { showMessageBox } = useMessageBox();
 
@@ -14,8 +14,10 @@ export default function ManageProductsModal({ isOpen, onClose, isOverlay = false
     const [newProductId, setNewProductId] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
 
+    const targetScope = dataScopeId || ownerId || currentUser?.uid;
+
     const filteredProducts = useMemo(() => {
-        if (!isOpen) return []; // Optimization: don't compute if not open
+        if (!isOpen) return [];
         return products.filter(p =>
             p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             (p.id && p.id.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -37,14 +39,14 @@ export default function ManageProductsModal({ isOpen, onClose, isOverlay = false
 
         try {
             if (newProductId) {
-                const docRef = doc(db, `artifacts/${appId}/users/${currentUser.uid}/products`, newProductId);
+                const docRef = doc(db, `artifacts/${appId}/users/${targetScope}/products`, newProductId.trim());
                 const docSnap = await getDoc(docRef);
                 if (docSnap.exists()) {
                     return showMessageBox("Duplicate ID", "Product with this ID already exists.");
                 }
                 await setDoc(docRef, { name, stock: 0 });
             } else {
-                await addDoc(collection(db, `artifacts/${appId}/users/${currentUser.uid}/products`), { name, stock: 0 });
+                await addDoc(collection(db, `artifacts/${appId}/users/${targetScope}/products`), { name, stock: 0 });
             }
             setNewProductName("");
             setNewProductId("");
@@ -68,14 +70,12 @@ export default function ManageProductsModal({ isOpen, onClose, isOverlay = false
                 if (products.some(p => p.id !== product.id && p.name.toLowerCase() === trimmedName.toLowerCase())) {
                     return showMessageBox("Duplicate Product", "A product with this name already exists.");
                 }
-                const docRef = doc(db, `artifacts/${appId}/users/${currentUser.uid}/products`, product.id);
+                const docRef = doc(db, `artifacts/${appId}/users/${targetScope}/products`, product.id);
                 updateDoc(docRef, { name: trimmedName })
                     .then(() => showMessageBox("Success", "Product name updated!"))
                     .catch(err => showMessageBox("Error", err.message));
             }
-        }, null, true); // true for password check if needed, but the original code had password check logic inside the callback wrapper.
-        // Wait, my showMessageBox implementation handles password internally if 'showPasswordInput' is true.
-        // The original code passed 'true' as the last argument for showPasswordInput.
+        }, null, true);
     }
 
     function handleDeleteProduct(productId) {
@@ -90,7 +90,7 @@ export default function ManageProductsModal({ isOpen, onClose, isOverlay = false
         }
 
         showMessageBox("Confirm Deletion", "Are you sure you want to delete this product?", 'confirm', () => {
-            const docRef = doc(db, `artifacts/${appId}/users/${currentUser.uid}/products`, productId);
+            const docRef = doc(db, `artifacts/${appId}/users/${targetScope}/products`, productId);
             deleteDoc(docRef)
                 .then(() => showMessageBox("Success", "Product deleted."))
                 .catch(err => showMessageBox("Error", err.message));
@@ -108,66 +108,75 @@ export default function ManageProductsModal({ isOpen, onClose, isOverlay = false
                         <input
                             type="text"
                             id="productIdInput"
-                            placeholder="Leave empty for auto-ID"
+                            placeholder="Auto-generated if left blank"
                             value={newProductId}
-                            onChange={e => setNewProductId(e.target.value)}
+                            onChange={(e) => setNewProductId(e.target.value)}
                         />
                     </div>
                     <div className="form-group">
-                        <label htmlFor="productName">Product Name:</label>
+                        <label htmlFor="productNameInput">Product Name:</label>
                         <input
                             type="text"
-                            id="productName"
+                            id="productNameInput"
                             placeholder="Enter product name"
                             required
-                            autoFocus
                             value={newProductName}
-                            onChange={e => setNewProductName(e.target.value)}
+                            onChange={(e) => setNewProductName(e.target.value)}
                         />
                     </div>
-                    <button type="submit" className="btn">Add Product</button>
+                    <button type="submit" className="btn btn-primary" style={{ width: '100%', marginBottom: '20px' }}>
+                        Add Product
+                    </button>
                 </form>
 
-                <h3>Existing Products</h3>
-                <div className="form-group" style={{ marginBottom: '20px' }}>
-                    <label htmlFor="manageProductSearchInput">Search Products:</label>
-                    <input
-                        type="text"
-                        id="manageProductSearchInput"
-                        placeholder="Search by Product ID or Name..."
-                        value={searchTerm}
-                        onChange={e => setSearchTerm(e.target.value)}
-                    />
-                </div>
-                <table id="productsTable" style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                        <tr>
-                            <th style={{ textAlign: 'left', padding: '10px' }}>ID</th>
-                            <th style={{ textAlign: 'left', padding: '10px' }}>Name</th>
-                            <th style={{ textAlign: 'left', padding: '10px' }}>Stock</th>
-                            <th style={{ textAlign: 'left', padding: '10px' }}>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {filteredProducts.length === 0 ? (
-                            <tr>
-                                <td colSpan="4" style={{ textAlign: 'center', padding: '20px', color: '#888' }}>No products found.</td>
-                            </tr>
-                        ) : (
-                            filteredProducts.map(product => (
-                                <tr key={product.id} style={{ borderBottom: '1px solid #eee' }}>
-                                    <td style={{ padding: '10px' }}>{product.id}</td>
-                                    <td style={{ padding: '10px' }}>{product.name}</td>
-                                    <td style={{ padding: '10px' }}>{product.stock}</td>
-                                    <td style={{ padding: '10px' }}>
-                                        <button className="btn btn-secondary ledger-actions-btn" style={{ marginRight: '5px', padding: '5px 10px', fontSize: '0.85em' }} onClick={() => handleEditProduct(product)}>Edit</button>
-                                        <button className="btn btn-danger ledger-actions-btn" style={{ padding: '5px 10px', fontSize: '0.85em' }} onClick={() => handleDeleteProduct(product.id)}>Delete</button>
-                                    </td>
-                                </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
+                {!isOverlay && (
+                    <>
+                        <hr />
+                        <h3>Existing Products ({filteredProducts.length})</h3>
+                        <div className="form-group">
+                            <input
+                                type="text"
+                                placeholder="Search products..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                style={{ width: '100%', padding: '8px', marginBottom: '10px' }}
+                            />
+                        </div>
+                        <div className="product-list-manage" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                            {filteredProducts.map(product => (
+                                <div key={product.id} className="product-item" style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    padding: '8px',
+                                    borderBottom: '1px solid #eee'
+                                }}>
+                                    <div>
+                                        <strong>{product.name}</strong>
+                                        <div style={{ fontSize: '0.8em', color: '#666' }}>
+                                            ID: {product.id} | Stock: {product.stock}
+                                        </div>
+                                    </div>
+                                    <div className="product-actions">
+                                        <button
+                                            className="btn btn-sm btn-secondary"
+                                            onClick={() => handleEditProduct(product)}
+                                            style={{ marginRight: '5px' }}
+                                        >
+                                            Edit
+                                        </button>
+                                        <button
+                                            className="btn btn-sm btn-danger"
+                                            onClick={() => handleDeleteProduct(product.id)}
+                                        >
+                                            Delete
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </>
+                )}
             </div>
         </div>
     );

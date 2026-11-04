@@ -11,8 +11,7 @@ import {
     FaPhone,
     FaMapMarkerAlt,
     FaEnvelope,
-    FaUserShield,
-    FaCheckCircle,
+    FaBuilding,
     FaExclamationTriangle
 } from "react-icons/fa";
 
@@ -22,6 +21,7 @@ export default function ProfileModal({ isOpen, onClose }) {
 
     // Profile form states
     const [name, setName] = useState("");
+    const [companyName, setCompanyName] = useState("");
     const [phone, setPhone] = useState("");
     const [address, setAddress] = useState("");
     const [isSavingProfile, setIsSavingProfile] = useState(false);
@@ -37,10 +37,12 @@ export default function ProfileModal({ isOpen, onClose }) {
     const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
     const isNameLocked = Boolean(userProfile?.name && userProfile.name.trim() !== "");
+    const isOwner = Boolean(userProfile?.isOwner);
 
     useEffect(() => {
         if (isOpen && currentUser) {
             setName(userProfile?.name || "");
+            setCompanyName(userProfile?.companyName || "");
             setPhone(userProfile?.phone || "");
             setAddress(userProfile?.address || "");
             setOldPassword("");
@@ -64,6 +66,7 @@ export default function ProfileModal({ isOpen, onClose }) {
         try {
             await saveUserProfileData({
                 name: !isNameLocked ? name.trim() : userProfile.name,
+                companyName: isOwner ? companyName.trim() : userProfile?.companyName,
                 phone: phone.trim(),
                 address: address.trim()
             });
@@ -121,7 +124,6 @@ export default function ProfileModal({ isOpen, onClose }) {
         }
     }
 
-    const isOwner = userProfile?.isOwner;
     const roleBadge = userProfile?.role || (isOwner ? "Owner" : "User");
 
     return (
@@ -184,13 +186,57 @@ export default function ProfileModal({ isOpen, onClose }) {
                             </span>
                         </div>
                         <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: '#607d8b' }}>
-                            Manage your personal details and account credentials
+                            Manage company name, profile details, and account security
                         </p>
                     </div>
                 </div>
 
                 {/* Profile Info Form */}
                 <form onSubmit={handleSaveProfile}>
+                    {/* Company Name Field */}
+                    <div className="form-group" style={{ marginBottom: '18px' }}>
+                        <label style={{ fontWeight: '600', color: '#1565c0', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <FaBuilding /> Company / Organization Name:
+                        </label>
+                        {isOwner ? (
+                            <div>
+                                <input
+                                    type="text"
+                                    value={companyName}
+                                    onChange={(e) => setCompanyName(e.target.value)}
+                                    placeholder="Enter your Company Name (e.g. NAD TRADING)"
+                                    style={{
+                                        width: '100%',
+                                        padding: '10px 12px',
+                                        borderRadius: '6px',
+                                        border: '2px solid #90caf9',
+                                        fontWeight: '600',
+                                        color: '#0d47a1',
+                                        backgroundColor: '#f5f9ff'
+                                    }}
+                                />
+                                <small style={{ color: '#546e7a', fontSize: '0.78rem', display: 'block', marginTop: '4px' }}>
+                                    🏢 All team members are linked under this Company Name to share products, inventory & invoices.
+                                </small>
+                            </div>
+                        ) : (
+                            <div style={{
+                                padding: '10px 12px',
+                                borderRadius: '6px',
+                                backgroundColor: '#e3f2fd',
+                                border: '1px solid #90caf9',
+                                color: '#0d47a1',
+                                fontWeight: 'bold',
+                                fontSize: '0.95rem'
+                            }}>
+                                🏢 {userProfile?.companyName || "Main Organization"}
+                                <span style={{ display: 'block', fontSize: '0.75rem', color: '#546e7a', fontWeight: 'normal', marginTop: '2px' }}>
+                                    (Managed by Company Administrator)
+                                </span>
+                            </div>
+                        )}
+                    </div>
+
                     {/* User Name Field (Locked or One-Time) */}
                     <div className="form-group" style={{ marginBottom: '18px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
@@ -531,4 +577,3 @@ export default function ProfileModal({ isOpen, onClose }) {
         </div>
     );
 }
-

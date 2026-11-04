@@ -9,8 +9,7 @@ import { db } from "../../firebase";
 import { FaEdit, FaTrash, FaUserShield, FaUserPlus, FaTimes, FaExpand, FaCompress } from "react-icons/fa";
 
 export default function ManageTeamModal({ isOpen, onClose }) {
-    // ...
-    const { currentUser } = useAuth();
+    const { currentUser, userProfile } = useAuth();
     const { appId } = useData();
     const { showMessageBox } = useMessageBox();
 
@@ -77,11 +76,13 @@ export default function ManageTeamModal({ isOpen, onClose }) {
         let secondaryApp = null;
 
         try {
+            const currentCompany = userProfile?.companyName || "";
             const memberData = {
                 name,
                 email,
                 password,
                 role,
+                companyName: currentCompany,
                 updatedAt: serverTimestamp()
             };
 
@@ -100,9 +101,9 @@ export default function ManageTeamModal({ isOpen, onClose }) {
 
                 // 1. Store Owner Mapping in the User's ROOT document
                 // Path: artifacts/{appId}/users/{newUid}
-                // We use setDoc with merge: true just in case, though it's a new user.
                 await setDoc(doc(secondaryDb, `artifacts/${appId}/users`, newUid), {
                     ownerId: currentUser.uid,
+                    companyName: currentCompany,
                     role: role,
                     email: email,
                     name: name,
@@ -324,6 +325,11 @@ export default function ManageTeamModal({ isOpen, onClose }) {
                                     <span style={{ height: '10px', width: '10px', backgroundColor: '#00e676', borderRadius: '50%', display: 'inline-block' }}></span>
                                 </div>
                                 <div style={{ color: '#78909c', fontSize: '0.9em', marginTop: '4px' }}>{currentUser?.email}</div>
+                                {userProfile?.companyName && (
+                                    <div style={{ color: '#1565c0', fontSize: '0.85em', fontWeight: 'bold', marginTop: '3px' }}>
+                                        🏢 {userProfile.companyName}
+                                    </div>
+                                )}
                                 <div style={{ marginTop: '8px' }}>
                                     <span style={{ backgroundColor: '#2962ff', color: '#fff', padding: '4px 8px', borderRadius: '4px', fontSize: '0.75em', fontWeight: 'bold' }}>ADMIN / OWNER</span>
                                 </div>

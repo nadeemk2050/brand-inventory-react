@@ -2,13 +2,13 @@ import { useState, useMemo, useEffect } from "react";
 import { useData } from "../../context/DataContext";
 import { useAuth } from "../../context/AuthContext";
 import { useMessageBox } from "../../context/MessageBoxContext";
-import { FaEdit, FaTrash, FaSearch, FaList, FaArrowLeft, FaArrowRight, FaAngleDoubleLeft, FaAngleDoubleRight, FaCalendarAlt } from "react-icons/fa";
+import { FaEdit, FaTrash, FaSearch, FaArrowLeft, FaArrowRight, FaAngleDoubleLeft, FaAngleDoubleRight, FaCalendarAlt } from "react-icons/fa";
 import { doc, runTransaction } from "firebase/firestore";
 import { db } from "../../firebase";
 import DateFilterModal from "./DateFilterModal";
 
 export default function SalesRegisterModal({ isOpen, onClose, onEditVoucher, onViewVoucher }) {
-    const { salesVouchers, products, appId } = useData();
+    const { salesVouchers, products, appId, dataScopeId, ownerId } = useData();
     const { currentUser } = useAuth();
     const { showMessageBox } = useMessageBox();
     const [searchTerm, setSearchTerm] = useState("");
@@ -21,6 +21,8 @@ export default function SalesRegisterModal({ isOpen, onClose, onEditVoucher, onV
     const [dateFilter, setDateFilter] = useState({ type: 'all', value: null });
     const [activeDateModal, setActiveDateModal] = useState(null);
     const [showDateMenu, setShowDateMenu] = useState(false);
+
+    const targetScope = dataScopeId || ownerId || currentUser?.uid;
 
     // Reset page when filter/sort changes
     useEffect(() => {
@@ -80,7 +82,6 @@ export default function SalesRegisterModal({ isOpen, onClose, onEditVoucher, onV
             let valA = a[sortConfig.key];
             let valB = b[sortConfig.key];
 
-            // Handle date specifically if needed, or string comparison
             if (sortConfig.key === 'date') {
                 valA = new Date(a.date || a.timestamp);
                 valB = new Date(b.date || b.timestamp);
@@ -97,11 +98,10 @@ export default function SalesRegisterModal({ isOpen, onClose, onEditVoucher, onV
         return filtered;
     }, [salesVouchers, searchTerm, isOpen, sortConfig, dateFilter]);
 
-
-    // Display total quantity
     const totalQuantity = useMemo(() => {
         return filteredVouchers.reduce((total, v) => {
-            const voucherQty = v.items ? v.items.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0) : 0;
+            const items = v.items || [];
+            const voucherQty = items.reduce((sum, i) => sum + (Number(i.quantity) || 0), 0);
             return total + voucherQty;
         }, 0);
     }, [filteredVouchers]);
@@ -118,13 +118,13 @@ export default function SalesRegisterModal({ isOpen, onClose, onEditVoucher, onV
             async () => {
                 try {
                     await runTransaction(db, async (transaction) => {
-                        const voucherRef = doc(db, `artifacts/${appId}/users/${currentUser.uid}/salesVouchers`, voucher.id);
+                        const voucherRef = doc(db, `artifacts/${appId}/users/${targetScope}/salesVouchers`, voucher.id);
 
                         // 1. Prepare Reads
                         const productReads = [];
                         for (const item of voucher.items) {
                             if (!item.productId) continue;
-                            const productRef = doc(db, `artifacts/${appId}/users/${currentUser.uid}/products`, item.productId);
+                            const productRef = doc(db, `artifacts/${appId}/users/${targetScope}/products`, item.productId);
                             productReads.push({ ref: productRef, item });
                         }
 
@@ -140,7 +140,6 @@ export default function SalesRegisterModal({ isOpen, onClose, onEditVoucher, onV
                             }
                         });
 
-
                         // 4. Delete the voucher
                         transaction.delete(voucherRef);
                     });
@@ -151,12 +150,10 @@ export default function SalesRegisterModal({ isOpen, onClose, onEditVoucher, onV
                 }
             },
             null,
-            true, // showPasswordInput
-            "abcd" // expectedPassword
+            true,
+            "abcd"
         );
     }
-
-
 
     return (
         <div className="modal-overlay" onClick={onClose} style={{ alignItems: 'flex-start' }}>
@@ -169,7 +166,7 @@ export default function SalesRegisterModal({ isOpen, onClose, onEditVoucher, onV
                 display: 'flex',
                 flexDirection: 'column',
                 margin: 0,
-                backgroundColor: '#fff' // Ensure no transparency
+                backgroundColor: '#fff'
             }}>
                 <button className="modal-close-btn" onClick={onClose}>&times;</button>
 

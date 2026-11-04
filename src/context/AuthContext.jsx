@@ -11,7 +11,7 @@ import {
     updatePassword,
     updateProfile
 } from "firebase/auth";
-import { doc, setDoc, onSnapshot, serverTimestamp, collection, query, where, getDocs, updateDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, onSnapshot, serverTimestamp, collection, query, where, getDocs, updateDoc } from "firebase/firestore";
 
 const AuthContext = createContext();
 
@@ -53,7 +53,7 @@ export function AuthProvider({ children }) {
         // Update password
         await updatePassword(auth.currentUser, newPassword);
 
-        // If user is a team member, optionally update their password in the team list doc
+        // If user is a team member, update their password in the team list doc
         if (userProfile?.ownerId && userProfile.ownerId !== auth.currentUser.uid) {
             try {
                 const teamRef = collection(db, `artifacts/${appId}/users/${userProfile.ownerId}/team_members`);
@@ -71,7 +71,7 @@ export function AuthProvider({ children }) {
         }
     }
 
-    async function saveUserProfileData({ name, phone, address }) {
+    async function saveUserProfileData({ name, companyName, phone, address }) {
         if (!auth.currentUser) throw new Error("User not logged in.");
 
         const uid = auth.currentUser.uid;
@@ -83,6 +83,11 @@ export function AuthProvider({ children }) {
             address: address || "",
             updatedAt: serverTimestamp()
         };
+
+        // Company Name
+        if (companyName !== undefined) {
+            updates.companyName = companyName.trim();
+        }
 
         // Name can only be set ONCE. If it's not locked yet and provided:
         const currentHasName = Boolean(userProfile?.name && userProfile.name.trim() !== "");
@@ -99,12 +104,31 @@ export function AuthProvider({ children }) {
         }
 
         // If this is owner's doc and didn't have ownerId set
-        if (!userProfile?.ownerId) {
+        if (!userProfile?.ownerId || userProfile.ownerId === uid) {
             updates.ownerId = uid;
             updates.isOwner = true;
         }
 
         await setDoc(userDocRef, updates, { merge: true });
+
+        // If owner and companyName is updated, propagate companyName to all team members
+        if ((!userProfile?.ownerId || userProfile.ownerId === uid) && updates.companyName !== undefined) {
+            try {
+                const teamRef = collection(db, `artifacts/${appId}/users/${uid}/team_members`);
+                const snap = await getDocs(teamRef);
+                const batchPromises = snap.docs.map(async (memberDoc) => {
+                    await updateDoc(memberDoc.ref, { companyName: updates.companyName });
+                    const memberData = memberDoc.data();
+                    if (memberData.uid) {
+                        const memberUserDoc = doc(db, `artifacts/${appId}/users`, memberData.uid);
+                        await setDoc(memberUserDoc, { companyName: updates.companyName }, { merge: true });
+                    }
+                });
+                await Promise.all(batchPromises);
+            } catch (err) {
+                console.warn("Could not propagate companyName to team:", err);
+            }
+        }
 
         // If team member, also update name/phone/address in team_members collection
         if (userProfile?.ownerId && userProfile.ownerId !== uid) {
@@ -130,11 +154,43 @@ export function AuthProvider({ children }) {
     useEffect(() => {
         let unsubscribeUserDoc = () => {};
 
-        const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+        const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
             setCurrentUser(user);
 
             if (user) {
                 const userDocRef = doc(db, `artifacts/${appId}/users`, user.uid);
+
+                // Initial verification: check if this user is a team member by query if doc doesn't exist
+                try {
+                    const initialSnap = await getDoc(userDocRef);
+                    if (!initialSnap.exists() || !initialSnap.data().ownerId) {
+                        // Check if this user was created in any owner's team_members list
+                        // Search by user email
+                        const usersRef = collection(db, `artifacts/${appId}/users`);
+                        const ownersSnap = await getDocs(usersRef);
+                        for (const oDoc of ownersSnap.docs) {
+                            const teamCol = collection(db, `artifacts/${appId}/users/${oDoc.id}/team_members`);
+                            const tmQuery = query(teamCol, where("email", "==", user.email));
+                            const tmSnap = await getDocs(tmQuery);
+                            if (!tmSnap.empty) {
+                                const tmData = tmSnap.docs[0].data();
+                                const ownerData = oDoc.data();
+                                await setDoc(userDocRef, {
+                                    ownerId: oDoc.id,
+                                    companyName: tmData.companyName || ownerData.companyName || "",
+                                    role: tmData.role || "Team Member",
+                                    name: tmData.name || "",
+                                    isTeamMember: true,
+                                    email: user.email
+                                }, { merge: true });
+                                break;
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.warn("User auto-link check error:", e);
+                }
+
                 unsubscribeUserDoc = onSnapshot(userDocRef, (docSnap) => {
                     if (docSnap.exists()) {
                         const data = docSnap.data();
@@ -143,6 +199,7 @@ export function AuthProvider({ children }) {
                             uid: user.uid,
                             email: user.email,
                             name: data.name || user.displayName || "",
+                            companyName: data.companyName || "",
                             nameLocked: Boolean(data.name && data.name.trim() !== ""),
                             role: data.role || (isOwner ? "Owner" : "Team Member"),
                             ownerId: data.ownerId || user.uid,
@@ -158,6 +215,7 @@ export function AuthProvider({ children }) {
                             uid: user.uid,
                             email: user.email,
                             name: user.displayName || "",
+                            companyName: "",
                             nameLocked: Boolean(user.displayName && user.displayName.trim() !== ""),
                             role: "Owner",
                             ownerId: user.uid,
@@ -170,6 +228,16 @@ export function AuthProvider({ children }) {
                     setLoading(false);
                 }, (error) => {
                     console.error("Error listening to user profile:", error);
+                    // Fallback to basic profile so the app doesn't break
+                    setUserProfile(prev => prev || {
+                        uid: user.uid,
+                        email: user.email,
+                        name: user.displayName || "",
+                        companyName: "",
+                        role: "Owner",
+                        ownerId: user.uid,
+                        isOwner: true
+                    });
                     setLoading(false);
                 });
             } else {

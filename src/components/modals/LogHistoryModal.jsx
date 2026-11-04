@@ -2,14 +2,14 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useData } from "../../context/DataContext";
 import { useMessageBox } from "../../context/MessageBoxContext";
-import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
+import { collection, query, onSnapshot } from "firebase/firestore";
 import { db } from "../../firebase";
-import { FaHistory, FaSearch, FaTimes, FaFilter, FaSync, FaSortAmountDown, FaSortAmountUp } from "react-icons/fa";
+import { FaHistory, FaSearch, FaTimes, FaSortAmountDown, FaSortAmountUp } from "react-icons/fa";
 import * as XLSX from "xlsx";
 
 export default function LogHistoryModal({ isOpen, onClose }) {
     const { currentUser } = useAuth();
-    const { appId } = useData();
+    const { appId, dataScopeId, ownerId } = useData();
     const { showMessageBox } = useMessageBox();
 
     const [logs, setLogs] = useState([]);
@@ -19,20 +19,21 @@ export default function LogHistoryModal({ isOpen, onClose }) {
     const [sortOrder, setSortOrder] = useState('desc');
     const [isSearchOpen, setIsSearchOpen] = useState(false);
 
+    const targetScope = dataScopeId || ownerId || currentUser?.uid;
+
     useEffect(() => {
-        if (!isOpen || !currentUser) return;
+        if (!isOpen || !currentUser || !targetScope) return;
 
         setLoading(true);
 
-        const qPurchase = query(collection(db, `artifacts/${appId}/users/${currentUser.uid}/purchaseInvoices`));
-        const qSales = query(collection(db, `artifacts/${appId}/users/${currentUser.uid}/salesVouchers`));
+        const qPurchase = query(collection(db, `artifacts/${appId}/users/${targetScope}/purchaseInvoices`));
+        const qSales = query(collection(db, `artifacts/${appId}/users/${targetScope}/salesVouchers`));
 
         let purchaseLogs = [];
         let salesLogs = [];
 
         function mergeAndSet() {
             const all = [...purchaseLogs, ...salesLogs];
-            // Initial sort (will be re-sorted by the other effect, but good for base)
             all.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
             setLogs(all);
             setLoading(false);
@@ -50,6 +51,9 @@ export default function LogHistoryModal({ isOpen, onClose }) {
                 };
             });
             mergeAndSet();
+        }, (err) => {
+            console.error("Log history purchase listener error:", err);
+            setLoading(false);
         });
 
         const unsubSales = onSnapshot(qSales, (snapshot) => {
@@ -65,13 +69,16 @@ export default function LogHistoryModal({ isOpen, onClose }) {
                 };
             });
             mergeAndSet();
+        }, (err) => {
+            console.error("Log history sales listener error:", err);
+            setLoading(false);
         });
 
         return () => {
             unsubPurchase();
             unsubSales();
         };
-    }, [isOpen, currentUser, appId]);
+    }, [isOpen, currentUser, appId, targetScope]);
 
     useEffect(() => {
         if (!logs) return;

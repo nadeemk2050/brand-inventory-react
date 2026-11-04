@@ -196,6 +196,11 @@ export default function Header({
                                             {userProfile?.role || (isOwner ? "Owner" : "User")}
                                         </span>
                                     </div>
+                                    {userProfile?.companyName && (
+                                        <div style={{ color: '#2e7d32', fontSize: '0.82em', fontWeight: 'bold', marginTop: '2px' }}>
+                                            🏢 {userProfile.companyName}
+                                        </div>
+                                    )}
                                     <div style={{ color: '#555', fontSize: '0.82em', marginTop: '2px' }}>{currentUser.email}</div>
                                 </div>
                                 <FaUserCircle size={20} color="#2e7d32" />
@@ -329,6 +334,37 @@ export default function Header({
                             >
                                 <FaUserCircle size={11} />
                                 <span>Login</span>
+                            </button>
+                        )}
+
+                        {currentUser && (userProfile?.companyName || isOwner) && (
+                            <button
+                                onClick={onOpenProfile}
+                                title={isOwner ? "Company: click to update in Profile" : `Company: ${userProfile?.companyName || "Default"}`}
+                                style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '3px',
+                                    backgroundColor: userProfile?.companyName ? '#e8f5e9' : '#f5f5f5',
+                                    color: userProfile?.companyName ? '#1b5e20' : '#757575',
+                                    border: userProfile?.companyName ? '1px solid #a5d6a7' : '1px dashed #bdbdbd',
+                                    borderRadius: '12px',
+                                    padding: '2px 7px',
+                                    fontSize: '0.70rem',
+                                    fontWeight: '700',
+                                    cursor: 'pointer',
+                                    lineHeight: '1.2',
+                                    maxWidth: '160px',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    boxShadow: '0 1px 2px rgba(0,0,0,0.06)'
+                                }}
+                            >
+                                <span>🏢</span>
+                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                    {userProfile?.companyName || (isOwner ? "Set Company" : "No Company")}
+                                </span>
                             </button>
                         )}
                     </div>

@@ -2,12 +2,12 @@ import { useState, useRef } from "react";
 import { useData } from "../../context/DataContext";
 import { useAuth } from "../../context/AuthContext";
 import { useMessageBox } from "../../context/MessageBoxContext";
-import { collection, addDoc, doc, runTransaction } from "firebase/firestore";
+import { collection, doc, runTransaction } from "firebase/firestore";
 import { db } from "../../firebase";
 import SearchableSelect from "../SearchableSelect";
 
 export default function TransactionModal({ isOpen, onClose, type, onAddNewProduct }) {
-    const { products, appId } = useData();
+    const { products, appId, dataScopeId, ownerId } = useData();
     const { currentUser, userProfile } = useAuth();
     const { showMessageBox } = useMessageBox();
 
@@ -19,6 +19,7 @@ export default function TransactionModal({ isOpen, onClose, type, onAddNewProduc
 
     if (!isOpen) return null;
 
+    const targetScope = dataScopeId || ownerId || currentUser?.uid;
     const isPurchase = type === 'purchase';
     const title = isPurchase ? "Purchase Invoice" : "Sales Voucher";
     const refLabel = isPurchase ? "Reference No.:" : "Buyer Name:";
@@ -71,7 +72,7 @@ export default function TransactionModal({ isOpen, onClose, type, onAddNewProduc
                 // 1. Perform ALL Reads first
                 const productReads = [];
                 for (const item of items) {
-                    const productRef = doc(db, `artifacts/${appId}/users/${currentUser.uid}/products`, item.productId);
+                    const productRef = doc(db, `artifacts/${appId}/users/${targetScope}/products`, item.productId);
                     productReads.push({ ref: productRef, item });
                 }
 
@@ -115,7 +116,7 @@ export default function TransactionModal({ isOpen, onClose, type, onAddNewProduc
                     status: 'Created'
                 };
 
-                const newInvoiceRef = doc(collection(db, `artifacts/${appId}/users/${currentUser.uid}/${collectionName}`));
+                const newInvoiceRef = doc(collection(db, `artifacts/${appId}/users/${targetScope}/${collectionName}`));
                 transaction.set(newInvoiceRef, invoiceData);
             });
 

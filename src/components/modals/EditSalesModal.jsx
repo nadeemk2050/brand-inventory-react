@@ -22,7 +22,7 @@ function ordinalSuffix(i) {
 }
 
 export default function EditSalesModal({ isOpen, onClose, voucherToEdit, onAddNewProduct, isReadOnly = false }) {
-    const { products, appId } = useData();
+    const { products, appId, dataScopeId, ownerId } = useData();
     const { currentUser, userProfile } = useAuth();
     const { showMessageBox } = useMessageBox();
 
@@ -31,6 +31,8 @@ export default function EditSalesModal({ isOpen, onClose, voucherToEdit, onAddNe
     const [narration, setNarration] = useState("");
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(false);
+
+    const targetScope = dataScopeId || ownerId || currentUser?.uid;
 
     useEffect(() => {
         if (voucherToEdit) {
@@ -68,11 +70,6 @@ export default function EditSalesModal({ isOpen, onClose, voucherToEdit, onAddNe
 
         try {
             await runTransaction(db, async (transaction) => {
-                // Map of productId -> netChange (new - old)
-                // For sales, positive quantity means DECREASING stock.
-                // Reversing old sale means INCREASING stock (+ old).
-                // Applying new sale means DECREASING stock (- new).
-                // netChange = old - new
                 const productChanges = {};
 
                 // Reverse old items (+ to stock)
@@ -87,7 +84,7 @@ export default function EditSalesModal({ isOpen, onClose, voucherToEdit, onAddNe
 
                 // Read all affected products
                 for (const productId of Object.keys(productChanges)) {
-                    const productRef = doc(db, `artifacts/${appId}/users/${currentUser.uid}/products`, productId);
+                    const productRef = doc(db, `artifacts/${appId}/users/${targetScope}/products`, productId);
                     const productDoc = await transaction.get(productRef);
                     if (!productDoc.exists()) throw new Error(`Product ${productId} not found.`);
 
@@ -104,7 +101,7 @@ export default function EditSalesModal({ isOpen, onClose, voucherToEdit, onAddNe
                     : (currentUser.displayName || currentUser.email);
 
                 // Update voucher
-                const voucherRef = doc(db, `artifacts/${appId}/users/${currentUser.uid}/salesVouchers`, voucherToEdit.id);
+                const voucherRef = doc(db, `artifacts/${appId}/users/${targetScope}/salesVouchers`, voucherToEdit.id);
                 const currentEditCount = (voucherToEdit.editCount || 0) + 1;
 
                 transaction.update(voucherRef, {

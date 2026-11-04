@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useData } from "../../context/DataContext";
 import { useAuth } from "../../context/AuthContext";
 import { useMessageBox } from "../../context/MessageBoxContext";
-import { doc, runTransaction, deleteDoc } from "firebase/firestore";
+import { doc, runTransaction } from "firebase/firestore";
 import { db } from "../../firebase";
 import SearchableSelect from "../SearchableSelect";
 
@@ -15,7 +15,7 @@ function ordinalSuffix(i) {
 }
 
 export default function EditPurchaseModal({ isOpen, onClose, invoiceToEdit, onAddNewProduct, isReadOnly = false }) {
-    const { products, appId } = useData();
+    const { products, appId, dataScopeId, ownerId } = useData();
     const { currentUser, userProfile } = useAuth();
     const { showMessageBox } = useMessageBox();
 
@@ -24,6 +24,8 @@ export default function EditPurchaseModal({ isOpen, onClose, invoiceToEdit, onAd
     const [narration, setNarration] = useState("");
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(false);
+
+    const targetScope = dataScopeId || ownerId || currentUser?.uid;
 
     useEffect(() => {
         if (invoiceToEdit) {
@@ -76,7 +78,7 @@ export default function EditPurchaseModal({ isOpen, onClose, invoiceToEdit, onAd
 
                 // Read all affected products
                 for (const productId of Object.keys(productChanges)) {
-                    const productRef = doc(db, `artifacts/${appId}/users/${currentUser.uid}/products`, productId);
+                    const productRef = doc(db, `artifacts/${appId}/users/${targetScope}/products`, productId);
                     const productDoc = await transaction.get(productRef);
                     if (!productDoc.exists()) throw new Error(`Product ${productId} not found.`);
 
@@ -93,7 +95,7 @@ export default function EditPurchaseModal({ isOpen, onClose, invoiceToEdit, onAd
                     : (currentUser.displayName || currentUser.email);
 
                 // Update invoice
-                const invoiceRef = doc(db, `artifacts/${appId}/users/${currentUser.uid}/purchaseInvoices`, invoiceToEdit.id);
+                const invoiceRef = doc(db, `artifacts/${appId}/users/${targetScope}/purchaseInvoices`, invoiceToEdit.id);
                 const currentEditCount = (invoiceToEdit.editCount || 0) + 1;
 
                 transaction.update(invoiceRef, {
@@ -126,14 +128,14 @@ export default function EditPurchaseModal({ isOpen, onClose, invoiceToEdit, onAd
                 await runTransaction(db, async (transaction) => {
                     // Reverse stock (subtract quantities)
                     for (const item of invoiceToEdit.items) {
-                        const productRef = doc(db, `artifacts/${appId}/users/${currentUser.uid}/products`, item.productId);
+                        const productRef = doc(db, `artifacts/${appId}/users/${targetScope}/products`, item.productId);
                         const productDoc = await transaction.get(productRef);
                         if (productDoc.exists()) {
                             const currentStock = productDoc.data().stock;
                             transaction.update(productRef, { stock: currentStock - item.quantity });
                         }
                     }
-                    const invoiceRef = doc(db, `artifacts/${appId}/users/${currentUser.uid}/purchaseInvoices`, invoiceToEdit.id);
+                    const invoiceRef = doc(db, `artifacts/${appId}/users/${targetScope}/purchaseInvoices`, invoiceToEdit.id);
                     transaction.delete(invoiceRef);
                 });
                 showMessageBox("Success", "Invoice deleted.");
