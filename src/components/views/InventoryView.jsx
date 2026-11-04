@@ -7,8 +7,6 @@ export default function InventoryView({ isActive, data, totalStock, onRowClick }
 
     const [currentPage, setCurrentPage] = useState(1);
 
-    // ... itemsToShow logic remains same ...
-
     // Reset page when data (search) changes
     useEffect(() => {
         setCurrentPage(1);
@@ -41,29 +39,28 @@ export default function InventoryView({ isActive, data, totalStock, onRowClick }
                 <span>Total Stock : {totalStock}</span>
             </div>
 
-            {/* Search Input Removed - Moved to Header */}
-            {/* Download Icons Removed - Moved to Header */}
-
-            <table id="inventory-overview-table">
-                <thead>
-                    <tr>
-                        <th>Product Name</th>
-                        <th style={{ textAlign: 'right' }}>Current Stock</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {itemsToShow.length === 0 ? (
-                        <tr><td colSpan="2" style={{ textAlign: 'center', padding: '20px', color: '#888' }}>No products found.</td></tr>
-                    ) : (
-                        itemsToShow.map(p => (
-                            <tr key={p.id} onClick={() => onRowClick && onRowClick(p.id)} style={{ cursor: 'pointer' }}>
-                                <td>{p.name}</td>
-                                <td style={{ textAlign: 'right', fontWeight: 'bold', color: p.stock < 10 ? 'red' : 'inherit' }}>{p.stock}</td>
-                            </tr>
-                        ))
-                    )}
-                </tbody>
-            </table>
+            <div className="table-responsive">
+                <table id="inventory-overview-table">
+                    <thead>
+                        <tr>
+                            <th>Product Name</th>
+                            <th style={{ textAlign: 'right' }}>Current Stock</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {itemsToShow.length === 0 ? (
+                            <tr><td colSpan="2" style={{ textAlign: 'center', padding: '20px', color: '#888' }}>No products found.</td></tr>
+                        ) : (
+                            itemsToShow.map(p => (
+                                <tr key={p.id} onClick={() => onRowClick && onRowClick(p.id)} style={{ cursor: 'pointer' }}>
+                                    <td>{p.name}</td>
+                                    <td style={{ textAlign: 'right', fontWeight: 'bold', color: p.stock < 10 ? 'red' : 'inherit' }}>{p.stock}</td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                </table>
+            </div>
 
             <div className="pagination-controls">
                 <button

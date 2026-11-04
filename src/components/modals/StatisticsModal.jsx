@@ -15,19 +15,10 @@ export default function StatisticsModal({ isOpen, onClose }) {
     const journalCount = 0; // Placeholder
     const stockJournalCount = 0; // Placeholder
 
-    // Attempting to calculate 'Payment' and 'Receipt' loosely from invoice status if applicable, 
-    // but for now, sticking to strict collections. 
-    // If the user has other collections not in DataContext (like ledgers), we can't count them yet.
-
     const totalVouchers = salesCount + purchaseCount + receiptCount + paymentCount + contraCount + journalCount + stockJournalCount;
-    const voucherTypesUsed = [salesCount, purchaseCount].filter(c => c > 0).length; // + others if non-zero
+    const voucherTypesUsed = [salesCount, purchaseCount].filter(c => c > 0).length;
 
-    // Calculate Accounts/Masters
-    // Assuming 'products' counts as Items/Products
     const itemsCount = products.length;
-    // We don't have 'ledgers', 'parties' collections fetched in DataContext yet.
-    // We will put placeholders or counts if we can derive them.
-    // Parties are often unique names in invoices.
 
     const uniqueParties = new Set([
         ...purchaseInvoices.map(i => i.partyName || i.sellerName),
@@ -36,37 +27,36 @@ export default function StatisticsModal({ isOpen, onClose }) {
     const partiesCount = uniqueParties.size;
 
     return (
-        <div className="modal-overlay" style={{ alignItems: 'flex-start' }}>
+        <div className="modal-overlay" style={{ alignItems: 'flex-start', padding: 0 }}>
             <div className="modal-content" style={{
                 width: '100vw',
                 height: '100vh',
                 maxWidth: 'none',
                 maxHeight: 'none',
                 borderRadius: 0,
-                padding: '20px',
+                padding: '16px',
                 display: 'flex',
                 flexDirection: 'column',
                 margin: 0
             }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <button className="btn-icon"><FaArrowLeft /></button>
-                        <h2 style={{ margin: 0, color: '#0056b3' }}>Statistics</h2>
+                        <button className="btn-icon" onClick={onClose} title="Back"><FaArrowLeft size={18} /></button>
+                        <h2 style={{ margin: 0, color: '#0056b3', fontSize: '1.35rem' }}>Statistics</h2>
                     </div>
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                        <FaExpand style={{ cursor: 'pointer', color: '#007bff' }} />
-                        <FaTimes style={{ cursor: 'pointer', color: '#dc3545' }} onClick={onClose} />
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                        <FaTimes size={20} style={{ cursor: 'pointer', color: '#dc3545' }} onClick={onClose} title="Close" />
                     </div>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9em', color: '#666', marginBottom: '15px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.88em', color: '#666', marginBottom: '15px', flexWrap: 'wrap', gap: '8px' }}>
                     <span>Period: {new Date().toISOString().slice(0, 10)} (Today)</span>
                     <span style={{ color: '#007bff', cursor: 'pointer' }}>Click any row to view details</span>
                 </div>
 
-                <div style={{ display: 'flex', gap: '20px', flexDirection: 'row', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: '20px', flexDirection: 'row', flexWrap: 'wrap', overflowY: 'auto' }}>
                     {/* Left Column: Types of Vouchers */}
-                    <div style={{ flex: 1, minWidth: '300px' }}>
+                    <div style={{ flex: 1, minWidth: '250px' }}>
                         <h4 style={{ color: '#8898aa', textTransform: 'uppercase', fontSize: '0.8em', marginBottom: '10px' }}>Types of Vouchers (Made)</h4>
                         <div className="stats-table">
                             <StatRow label="Sales" value={salesCount} />
@@ -87,11 +77,10 @@ export default function StatisticsModal({ isOpen, onClose }) {
                     </div>
 
                     {/* Right Column: Types of Accounts / Masters */}
-                    <div style={{ flex: 1, minWidth: '300px' }}>
+                    <div style={{ flex: 1, minWidth: '250px' }}>
                         <h4 style={{ color: '#8898aa', textTransform: 'uppercase', fontSize: '0.8em', marginBottom: '10px' }}>Types of Accounts / Masters</h4>
                         <div className="stats-table">
-                            {/* Using placeholders for data we don't strictly have in DataContext yet */}
-                            <StatRow label="Ledgers (Total)" value={partiesCount + itemsCount + 5} /* Mocking total based on components */ />
+                            <StatRow label="Ledgers (Total)" value={partiesCount + itemsCount + 5} />
                             <StatRow label="Parties" value={partiesCount} />
                             <StatRow label="Accounts (Cash/Bank)" value={1} />
                             <StatRow label="Expenses" value={0} />

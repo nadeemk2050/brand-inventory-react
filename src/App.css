@@ -1,8 +1,17 @@
-/* CSS from inventory.html */
-body {
-    font-family: 'Inter', sans-serif;
+/* Universal Box Sizing & Mobile Base */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+html, body {
     margin: 0;
     padding: 0;
+    width: 100%;
+    overflow-x: hidden;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
     background-color: #f4f7f6;
     color: #333;
     line-height: 1.6;
@@ -801,4 +810,317 @@ textarea {
     max-width: 90%;
     width: 400px;
     text-align: center;
+}
+
+/* ========================================================
+   RESPONSIVE TABLE WRAPPER
+   ======================================================== */
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* ========================================================
+   FULL-PAGE BLEEDING MANAGE TEAM VIEW
+   ======================================================== */
+.manage-team-fullpage {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    background-color: #f8fafc;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+}
+
+.manage-team-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #f8fafc;
+}
+
+.manage-team-header {
+    background: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    z-index: 10;
+}
+
+.manage-team-tabs {
+    display: flex;
+    background: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 8px 12px;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.manage-team-tab-btn {
+    flex: 1;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    background: #f8fafc;
+    color: #475569;
+    font-weight: 600;
+    font-size: 0.9em;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s;
+    min-height: 44px;
+}
+
+.manage-team-tab-btn.active {
+    background: #2563eb;
+    color: #ffffff;
+    border-color: #2563eb;
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+}
+
+.manage-team-content {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+@media (max-width: 767px) {
+    .manage-team-col-form,
+    .manage-team-col-list {
+        display: none;
+        width: 100%;
+        height: 100%;
+        overflow-y: auto;
+        padding: 14px 12px 50px 12px;
+        -webkit-overflow-scrolling: touch;
+        box-sizing: border-box;
+    }
+
+    .manage-team-col-form.tab-active,
+    .manage-team-col-list.tab-active {
+        display: block;
+    }
+}
+
+@media (min-width: 768px) {
+    .manage-team-tabs {
+        display: none;
+    }
+
+    .manage-team-col-form {
+        flex: 0 0 450px;
+        border-right: 1px solid #e2e8f0;
+        background: #ffffff;
+        overflow-y: auto;
+        padding: 24px;
+        box-sizing: border-box;
+    }
+
+    .manage-team-col-list {
+        flex: 1;
+        background: #f8fafc;
+        overflow-y: auto;
+        padding: 24px 30px;
+        box-sizing: border-box;
+    }
+}
+
+/* ========================================================
+   MOBILE SCREEN ADAPTIVE STYLES FOR ALL PAGES & SECTIONS
+   ======================================================== */
+@media (max-width: 768px) {
+    /* 1. Full-Bleed / Edge-to-Edge Main Container */
+    .container {
+        margin: 0 !important;
+        padding: 8px 6px !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        box-sizing: border-box !important;
+    }
+
+    #inventory-overview,
+    #all-invoices-details {
+        padding: 12px 10px !important;
+        border-radius: 10px !important;
+        margin-bottom: 12px !important;
+        border: 1px solid #e2e8f0 !important;
+        box-shadow: none !important;
+    }
+
+    #inventory-overview h2,
+    #all-invoices-details h2 {
+        font-size: 1.3rem !important;
+        margin-bottom: 14px !important;
+        padding-bottom: 8px !important;
+    }
+
+    #total-stock-balance {
+        font-size: 1.15rem !important;
+        padding: 10px 14px !important;
+        border-radius: 8px !important;
+        margin-bottom: 12px !important;
+    }
+
+    /* 2. Modern Header Mobile Adaptivity */
+    .modern-header {
+        padding: 10px 12px !important;
+        gap: 6px !important;
+        flex-wrap: wrap !important;
+    }
+
+    .header-center {
+        padding-left: 4px !important;
+    }
+
+    .nav-btn {
+        padding: 7px 12px !important;
+        font-size: 0.85rem !important;
+        gap: 5px !important;
+    }
+
+    .modern-dropdown-menu {
+        width: calc(100vw - 24px) !important;
+        max-width: 310px !important;
+        left: 0 !important;
+        top: calc(100% + 8px) !important;
+    }
+
+    /* 3. Form Inputs & Buttons */
+    input[type="text"],
+    input[type="number"],
+    input[type="date"],
+    input[type="email"],
+    input[type="password"],
+    textarea,
+    select {
+        width: 100% !important;
+        min-height: 44px !important;
+        font-size: 16px !important;
+        padding: 10px 12px !important;
+        box-sizing: border-box !important;
+    }
+
+    .btn {
+        min-height: 44px !important;
+        font-size: 0.95rem !important;
+        padding: 10px 14px !important;
+    }
+
+    .main-actions {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 10px !important;
+        padding: 12px !important;
+        margin-top: 12px !important;
+    }
+
+    .main-actions .btn {
+        width: 100% !important;
+        min-width: 100% !important;
+        margin-right: 0 !important;
+        padding: 12px !important;
+    }
+
+    /* 4. Tables & Pagination */
+    #inventory-overview-table th,
+    #inventory-overview-table td,
+    #all-invoices-table th,
+    #all-invoices-table td {
+        padding: 10px 8px !important;
+        font-size: 0.88rem !important;
+    }
+
+    .pagination-controls {
+        gap: 6px !important;
+        margin-top: 14px !important;
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+    }
+
+    .pagination-btn {
+        width: 36px !important;
+        height: 36px !important;
+        min-width: 36px !important;
+    }
+
+    /* 5. Modals Full-Screen Bleeding on Mobile */
+    .modal-overlay {
+        padding: 0 !important;
+        padding-top: 0 !important;
+        align-items: stretch !important;
+        justify-content: stretch !important;
+    }
+
+    .modal-content {
+        width: 100vw !important;
+        max-width: 100vw !important;
+        height: 100% !important;
+        max-height: 100dvh !important;
+        border-radius: 0 !important;
+        margin: 0 !important;
+        padding: 16px 14px 40px 14px !important;
+        box-sizing: border-box !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    .modal-close-btn {
+        top: 10px !important;
+        right: 10px !important;
+        font-size: 1.7rem !important;
+        padding: 6px !important;
+        z-index: 100 !important;
+    }
+
+    /* Keep confirmation message boxes centered on mobile */
+    .message-box-overlay {
+        padding: 16px !important;
+    }
+
+    .message-box {
+        width: 100% !important;
+        max-width: 350px !important;
+        padding: 24px 18px !important;
+        border-radius: 14px !important;
+        margin: auto !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .modern-header {
+        padding: 8px 10px !important;
+    }
+
+    .install-btn span,
+    .home-btn span {
+        display: none !important;
+    }
+
+    .nav-btn {
+        padding: 8px 10px !important;
+        border-radius: 50% !important;
+        min-width: 36px !important;
+        justify-content: center !important;
+    }
 }

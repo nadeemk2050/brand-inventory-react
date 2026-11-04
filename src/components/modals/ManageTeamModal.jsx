@@ -6,7 +6,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useData } from "../../context/DataContext";
 import { useMessageBox } from "../../context/MessageBoxContext";
 import { db } from "../../firebase";
-import { FaEdit, FaTrash, FaUserShield, FaUserPlus, FaTimes, FaExpand, FaCompress } from "react-icons/fa";
+import { FaEdit, FaTrash, FaUserShield, FaUserPlus, FaTimes, FaArrowLeft, FaUsers, FaBuilding, FaCheck } from "react-icons/fa";
 
 export default function ManageTeamModal({ isOpen, onClose }) {
     const { currentUser, userProfile } = useAuth();
@@ -15,7 +15,7 @@ export default function ManageTeamModal({ isOpen, onClose }) {
 
     const [teamMembers, setTeamMembers] = useState([]);
     const [loading, setLoading] = useState(false);
-    const [isFullscreen, setIsFullscreen] = useState(false);
+    const [activeTab, setActiveTab] = useState("form"); // "form" | "list"
 
     // Form State
     const [name, setName] = useState("");
@@ -55,7 +55,7 @@ export default function ManageTeamModal({ isOpen, onClose }) {
 
     if (!isOpen) return null;
 
-    // Config for creating secondary app instance to adding users without logging out admin
+    // Config for creating secondary app instance to add users without logging out admin
     const firebaseConfig = {
         apiKey: "AIzaSyAU0AAPQyBdWDfDRw_ByPSG0ldlAWij3SE",
         authDomain: "brandsinvent-599bb.firebaseapp.com",
@@ -78,8 +78,8 @@ export default function ManageTeamModal({ isOpen, onClose }) {
         try {
             const currentCompany = userProfile?.companyName || "";
             const memberData = {
-                name,
-                email,
+                name: name.trim(),
+                email: email.trim(),
                 password,
                 role,
                 companyName: currentCompany,
@@ -96,7 +96,7 @@ export default function ManageTeamModal({ isOpen, onClose }) {
                 const secondaryAuth = getAuth(secondaryApp);
                 const secondaryDb = getFirestore(secondaryApp);
 
-                const userCredential = await createUserWithEmailAndPassword(secondaryAuth, email, password);
+                const userCredential = await createUserWithEmailAndPassword(secondaryAuth, email.trim(), password);
                 const newUid = userCredential.user.uid;
 
                 // 1. Store Owner Mapping in the User's ROOT document
@@ -105,8 +105,8 @@ export default function ManageTeamModal({ isOpen, onClose }) {
                     ownerId: currentUser.uid,
                     companyName: currentCompany,
                     role: role,
-                    email: email,
-                    name: name,
+                    email: email.trim(),
+                    name: name.trim(),
                     isTeamMember: true
                 }, { merge: true });
 
@@ -119,6 +119,7 @@ export default function ManageTeamModal({ isOpen, onClose }) {
             }
 
             resetForm();
+            setActiveTab("list"); // Switch to list view so user immediately sees results on mobile
         } catch (error) {
             console.error("Error creating user:", error);
             let msg = error.message;
@@ -142,10 +143,11 @@ export default function ManageTeamModal({ isOpen, onClose }) {
 
     function handleEdit(member) {
         setEditingId(member.id);
-        setName(member.name);
-        setEmail(member.email);
+        setName(member.name || "");
+        setEmail(member.email || "");
         setPassword(member.password || "");
-        setRole(member.role);
+        setRole(member.role || "Sales Person");
+        setActiveTab("form"); // Switch to form tab so user can immediately edit on mobile
     }
 
     function handleDelete(member) {
@@ -172,241 +174,572 @@ export default function ManageTeamModal({ isOpen, onClose }) {
         setEditingId(null);
     }
 
+    const companyDisplayName = userProfile?.companyName || "NAD STOCK";
+
     return (
-        <div className="modal-overlay" onClick={onClose} style={{ alignItems: 'flex-start', paddingTop: '50px' }}>
-            <div
-                className="modal-content"
-                onClick={e => e.stopPropagation()}
-                style={{
-                    width: isFullscreen ? '100vw' : '95%',
-                    height: isFullscreen ? '100vh' : '85vh',
-                    maxWidth: isFullscreen ? 'none' : '1100px',
-                    margin: 0,
-                    borderRadius: isFullscreen ? 0 : '12px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    padding: 0,
-                    overflow: 'hidden',
-                    backgroundColor: '#f8f9fa'
-                }}
-            >
-                {/* Header */}
-                <div style={{
-                    padding: '15px 25px',
-                    borderBottom: '1px solid #e0e0e0',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    backgroundColor: '#fff'
-                }}>
-                    <h2 style={{ margin: 0, color: '#1a237e', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <FaUserPlus /> Manage Team / Users
-                    </h2>
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                        <button onClick={() => setIsFullscreen(!isFullscreen)} className="icon-btn" title="Toggle Fullscreen">
-                            {isFullscreen ? <FaCompress /> : <FaExpand />}
+        <div className="manage-team-fullpage" onClick={onClose}>
+            <div className="manage-team-container" onClick={e => e.stopPropagation()}>
+                {/* Full-Bleed Top Header */}
+                <div className="manage-team-header">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                        <button
+                            onClick={onClose}
+                            className="btn-icon"
+                            style={{
+                                background: '#f1f5f9',
+                                border: '1px solid #cbd5e1',
+                                borderRadius: '50%',
+                                width: '38px',
+                                height: '38px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                                color: '#1e293b',
+                                flexShrink: 0
+                            }}
+                            title="Back / Close"
+                            aria-label="Back"
+                        >
+                            <FaArrowLeft size={16} />
                         </button>
-                        <button onClick={onClose} className="icon-btn" title="Close"><FaTimes /></button>
+                        <div style={{ minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                <h2 style={{
+                                    margin: 0,
+                                    fontSize: '1.25rem',
+                                    color: '#0f172a',
+                                    fontWeight: '700',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px'
+                                }}>
+                                    <FaUsers color="#2563eb" /> Manage Team / Users
+                                </h2>
+                                <span style={{
+                                    backgroundColor: '#dbeafe',
+                                    color: '#1d4ed8',
+                                    padding: '2px 8px',
+                                    borderRadius: '12px',
+                                    fontSize: '0.75rem',
+                                    fontWeight: '700',
+                                    whiteSpace: 'nowrap'
+                                }}>
+                                    {teamMembers.length} {teamMembers.length === 1 ? 'Member' : 'Members'}
+                                </span>
+                            </div>
+                            <div style={{
+                                fontSize: '0.8rem',
+                                color: '#64748b',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '5px',
+                                marginTop: '2px',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap'
+                            }}>
+                                <span>🏢 Company:</span>
+                                <strong style={{ color: '#0f172a' }}>{companyDisplayName}</strong>
+                            </div>
+                        </div>
                     </div>
+
+                    <button
+                        onClick={onClose}
+                        className="btn-icon"
+                        style={{
+                            background: '#f1f5f9',
+                            border: '1px solid #cbd5e1',
+                            borderRadius: '50%',
+                            width: '38px',
+                            height: '38px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            color: '#64748b',
+                            flexShrink: 0
+                        }}
+                        title="Close"
+                        aria-label="Close"
+                    >
+                        <FaTimes size={16} />
+                    </button>
                 </div>
 
-                <div style={{ display: 'flex', flex: 1, overflow: 'hidden', flexDirection: 'row', flexWrap: 'wrap' }}>
+                {/* Mobile Responsive Navigation Tabs */}
+                <div className="manage-team-tabs">
+                    <button
+                        className={`manage-team-tab-btn ${activeTab === 'form' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('form')}
+                    >
+                        <FaUserPlus /> {editingId ? "Edit User" : "Add User"}
+                    </button>
+                    <button
+                        className={`manage-team-tab-btn ${activeTab === 'list' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('list')}
+                    >
+                        <FaUsers /> Team List ({teamMembers.length})
+                    </button>
+                </div>
 
-                    {/* Left Column: Create/Edit Form */}
-                    <div style={{
-                        flex: '1 1 400px',
-                        padding: '25px',
-                        overflowY: 'auto',
-                        borderRight: '1px solid #e0e0e0',
-                        backgroundColor: '#fff'
-                    }}>
-                        <h3 style={{ color: '#1565c0', marginBottom: '20px', borderBottom: '2px solid #e3f2fd', paddingBottom: '10px' }}>
-                            {editingId ? "EDIT USER" : "CREATE NEW USER"}
-                        </h3>
+                {/* Main Content Area */}
+                <div className="manage-team-content">
 
-                        <form onSubmit={handleSubmit}>
-                            <div className="form-group">
-                                <label style={{ color: '#546e7a', fontWeight: '600' }}>Name</label>
-                                <input
-                                    type="text"
-                                    value={name}
-                                    onChange={e => setName(e.target.value)}
-                                    placeholder="Enter full name"
-                                    required
-                                    style={{ borderColor: '#cfd8dc', padding: '12px' }}
-                                />
-                            </div>
-
-                            <div className="form-group">
-                                <label style={{ color: '#546e7a', fontWeight: '600' }}>Email</label>
-                                <input
-                                    type="email"
-                                    value={email}
-                                    onChange={e => setEmail(e.target.value)}
-                                    placeholder="Enter email address"
-                                    required
-                                    style={{ borderColor: '#cfd8dc', padding: '12px' }}
-                                />
-                            </div>
-
-                            <div className="form-group">
-                                <label style={{ color: '#546e7a', fontWeight: '600' }}>Password</label>
-                                <input
-                                    type="text"
-                                    value={password}
-                                    onChange={e => setPassword(e.target.value)}
-                                    placeholder="Enter password"
-                                    required={!editingId}
-                                    style={{ borderColor: '#cfd8dc', padding: '12px' }}
-                                />
-                            </div>
-
-                            <div className="form-group">
-                                <label style={{ color: '#546e7a', fontWeight: '600' }}>Role</label>
-                                <select
-                                    value={role}
-                                    onChange={e => setRole(e.target.value)}
-                                    style={{ borderColor: '#cfd8dc', padding: '12px', width: '100%', borderRadius: '6px', border: '1px solid #ccc' }}
-                                >
-                                    {roles.map(r => <option key={r} value={r}>{r}</option>)}
-                                </select>
-                            </div>
-
-                            <div style={{ marginTop: '30px', display: 'flex', gap: '10px' }}>
-                                <button
-                                    type="submit"
-                                    className="btn"
-                                    style={{
-                                        flex: 1,
-                                        backgroundColor: '#2962ff',
-                                        fontWeight: 'bold',
-                                        padding: '12px',
-                                        fontSize: '1em'
-                                    }}
-                                    disabled={loading}
-                                >
-                                    {loading ? "Saving..." : (editingId ? "Update User" : "Create User")}
-                                </button>
+                    {/* Column 1: Create / Edit User Form */}
+                    <div className={`manage-team-col-form ${activeTab === 'form' ? 'tab-active' : ''}`}>
+                        <div style={{
+                            backgroundColor: '#ffffff',
+                            borderRadius: '12px',
+                            padding: '20px',
+                            border: '1px solid #e2e8f0',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                        }}>
+                            <div style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                marginBottom: '16px',
+                                borderBottom: '2px solid #eff6ff',
+                                paddingBottom: '10px'
+                            }}>
+                                <h3 style={{
+                                    margin: 0,
+                                    color: '#1d4ed8',
+                                    fontSize: '1.1rem',
+                                    fontWeight: '700',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px'
+                                }}>
+                                    <FaUserPlus size={16} />
+                                    {editingId ? "EDIT TEAM MEMBER" : "CREATE NEW USER"}
+                                </h3>
                                 {editingId && (
                                     <button
                                         type="button"
                                         onClick={resetForm}
-                                        className="btn btn-secondary"
-                                        style={{ width: 'auto' }}
+                                        style={{
+                                            fontSize: '0.8rem',
+                                            color: '#dc2626',
+                                            background: '#fee2e2',
+                                            border: 'none',
+                                            borderRadius: '6px',
+                                            padding: '4px 10px',
+                                            cursor: 'pointer',
+                                            fontWeight: '600'
+                                        }}
                                     >
-                                        Cancel
+                                        Cancel Edit
                                     </button>
                                 )}
                             </div>
-                        </form>
+
+                            <form onSubmit={handleSubmit}>
+                                <div className="form-group" style={{ marginBottom: '14px' }}>
+                                    <label style={{ color: '#334155', fontWeight: '600', fontSize: '0.9rem', marginBottom: '6px' }}>
+                                        Full Name *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={name}
+                                        onChange={e => setName(e.target.value)}
+                                        placeholder="Enter member's full name"
+                                        required
+                                        style={{
+                                            width: '100%',
+                                            padding: '12px',
+                                            borderRadius: '8px',
+                                            border: '1px solid #cbd5e1',
+                                            fontSize: '16px',
+                                            boxSizing: 'border-box'
+                                        }}
+                                    />
+                                </div>
+
+                                <div className="form-group" style={{ marginBottom: '14px' }}>
+                                    <label style={{ color: '#334155', fontWeight: '600', fontSize: '0.9rem', marginBottom: '6px' }}>
+                                        Email Address *
+                                    </label>
+                                    <input
+                                        type="email"
+                                        value={email}
+                                        onChange={e => setEmail(e.target.value)}
+                                        placeholder="Enter member's login email"
+                                        required
+                                        disabled={Boolean(editingId)}
+                                        style={{
+                                            width: '100%',
+                                            padding: '12px',
+                                            borderRadius: '8px',
+                                            border: '1px solid #cbd5e1',
+                                            fontSize: '16px',
+                                            boxSizing: 'border-box',
+                                            backgroundColor: editingId ? '#f1f5f9' : '#fff'
+                                        }}
+                                    />
+                                    {editingId && (
+                                        <small style={{ color: '#64748b', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
+                                            Email cannot be modified once registered.
+                                        </small>
+                                    )}
+                                </div>
+
+                                <div className="form-group" style={{ marginBottom: '14px' }}>
+                                    <label style={{ color: '#334155', fontWeight: '600', fontSize: '0.9rem', marginBottom: '6px' }}>
+                                        {editingId ? "Password (Leave blank to keep current)" : "Password *"}
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={password}
+                                        onChange={e => setPassword(e.target.value)}
+                                        placeholder={editingId ? "Enter new password or leave blank" : "Enter minimum 6 characters"}
+                                        required={!editingId}
+                                        style={{
+                                            width: '100%',
+                                            padding: '12px',
+                                            borderRadius: '8px',
+                                            border: '1px solid #cbd5e1',
+                                            fontSize: '16px',
+                                            boxSizing: 'border-box'
+                                        }}
+                                    />
+                                </div>
+
+                                <div className="form-group" style={{ marginBottom: '16px' }}>
+                                    <label style={{ color: '#334155', fontWeight: '600', fontSize: '0.9rem', marginBottom: '6px' }}>
+                                        Role / Designation *
+                                    </label>
+                                    <select
+                                        value={role}
+                                        onChange={e => setRole(e.target.value)}
+                                        style={{
+                                            width: '100%',
+                                            padding: '12px',
+                                            borderRadius: '8px',
+                                            border: '1px solid #cbd5e1',
+                                            fontSize: '16px',
+                                            boxSizing: 'border-box',
+                                            backgroundColor: '#fff'
+                                        }}
+                                    >
+                                        {roles.map(r => <option key={r} value={r}>{r}</option>)}
+                                    </select>
+                                </div>
+
+                                <div style={{
+                                    backgroundColor: '#f0fdf4',
+                                    border: '1px solid #bbf7d0',
+                                    borderRadius: '8px',
+                                    padding: '10px 12px',
+                                    marginBottom: '20px',
+                                    fontSize: '0.82rem',
+                                    color: '#166534',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px'
+                                }}>
+                                    <FaBuilding color="#16a34a" size={14} style={{ flexShrink: 0 }} />
+                                    <span>
+                                        This user will be linked under <strong>{companyDisplayName}</strong> and can view/manage shared inventory.
+                                    </span>
+                                </div>
+
+                                <div style={{ display: 'flex', gap: '10px' }}>
+                                    <button
+                                        type="submit"
+                                        className="btn"
+                                        style={{
+                                            flex: 1,
+                                            backgroundColor: '#2563eb',
+                                            color: '#fff',
+                                            fontWeight: 'bold',
+                                            padding: '14px',
+                                            fontSize: '1rem',
+                                            borderRadius: '8px',
+                                            border: 'none',
+                                            cursor: 'pointer',
+                                            boxShadow: '0 4px 12px rgba(37,99,235,0.25)'
+                                        }}
+                                        disabled={loading}
+                                    >
+                                        {loading ? "Processing..." : (editingId ? "Update User" : "Create User")}
+                                    </button>
+                                    {editingId && (
+                                        <button
+                                            type="button"
+                                            onClick={resetForm}
+                                            className="btn btn-secondary"
+                                            style={{
+                                                padding: '14px 20px',
+                                                borderRadius: '8px'
+                                            }}
+                                        >
+                                            Cancel
+                                        </button>
+                                    )}
+                                </div>
+                            </form>
+                        </div>
                     </div>
 
-                    {/* Right Column: User List */}
-                    <div style={{ flex: '1 1 400px', padding: '25px', overflowY: 'auto', backgroundColor: '#f5f7fa' }}>
-                        <h3 style={{ color: '#455a64', marginBottom: '20px', borderBottom: '1px solid #cfd8dc', paddingBottom: '10px' }}>
-                            YOUR TEAM
-                        </h3>
-
-                        {/* Current User Card */}
+                    {/* Column 2: Team Members List */}
+                    <div className={`manage-team-col-list ${activeTab === 'list' ? 'tab-active' : ''}`}>
                         <div style={{
-                            backgroundColor: '#fff',
-                            padding: '15px',
-                            borderRadius: '8px',
-                            border: '1px solid #1a237e',
-                            marginBottom: '15px',
-                            boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginBottom: '16px'
+                        }}>
+                            <h3 style={{
+                                margin: 0,
+                                color: '#334155',
+                                fontSize: '1.1rem',
+                                fontWeight: '700',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px'
+                            }}>
+                                <FaUsers color="#64748b" /> TEAM MEMBERS
+                            </h3>
+                            <button
+                                onClick={() => {
+                                    resetForm();
+                                    setActiveTab('form');
+                                }}
+                                style={{
+                                    backgroundColor: '#2563eb',
+                                    color: '#fff',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    padding: '6px 12px',
+                                    fontSize: '0.82rem',
+                                    fontWeight: '600',
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '6px'
+                                }}
+                            >
+                                <FaUserPlus size={12} /> Add New
+                            </button>
+                        </div>
+
+                        {/* Current User (Owner/Admin) Card */}
+                        <div style={{
+                            backgroundColor: '#ffffff',
+                            padding: '16px',
+                            borderRadius: '12px',
+                            border: '2px solid #2563eb',
+                            marginBottom: '14px',
+                            boxShadow: '0 2px 6px rgba(37,99,235,0.08)',
                             display: 'flex',
                             justifyContent: 'space-between',
                             alignItems: 'flex-start'
                         }}>
-                            <div>
-                                <div style={{ fontWeight: 'bold', fontSize: '1.1em', color: '#1a237e', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    {currentUser?.displayName || currentUser?.email || "Admin"}
-                                    <span style={{ height: '10px', width: '10px', backgroundColor: '#00e676', borderRadius: '50%', display: 'inline-block' }}></span>
+                            <div style={{ minWidth: 0 }}>
+                                <div style={{
+                                    fontWeight: 'bold',
+                                    fontSize: '1.05rem',
+                                    color: '#0f172a',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px'
+                                }}>
+                                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {userProfile?.name || currentUser?.displayName || "Admin / Owner"}
+                                    </span>
+                                    <span style={{
+                                        height: '9px',
+                                        width: '9px',
+                                        backgroundColor: '#10b981',
+                                        borderRadius: '50%',
+                                        display: 'inline-block',
+                                        flexShrink: 0
+                                    }} title="Active Administrator"></span>
                                 </div>
-                                <div style={{ color: '#78909c', fontSize: '0.9em', marginTop: '4px' }}>{currentUser?.email}</div>
-                                {userProfile?.companyName && (
-                                    <div style={{ color: '#1565c0', fontSize: '0.85em', fontWeight: 'bold', marginTop: '3px' }}>
-                                        🏢 {userProfile.companyName}
-                                    </div>
-                                )}
+                                <div style={{ color: '#64748b', fontSize: '0.85rem', marginTop: '3px', wordBreak: 'break-all' }}>
+                                    {currentUser?.email}
+                                </div>
+                                <div style={{
+                                    color: '#1e40af',
+                                    fontSize: '0.82rem',
+                                    fontWeight: '600',
+                                    marginTop: '4px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px'
+                                }}>
+                                    <FaBuilding size={12} /> {companyDisplayName}
+                                </div>
                                 <div style={{ marginTop: '8px' }}>
-                                    <span style={{ backgroundColor: '#2962ff', color: '#fff', padding: '4px 8px', borderRadius: '4px', fontSize: '0.75em', fontWeight: 'bold' }}>ADMIN / OWNER</span>
+                                    <span style={{
+                                        backgroundColor: '#2563eb',
+                                        color: '#ffffff',
+                                        padding: '3px 8px',
+                                        borderRadius: '6px',
+                                        fontSize: '0.72rem',
+                                        fontWeight: '700',
+                                        letterSpacing: '0.5px'
+                                    }}>
+                                        ADMIN / OWNER
+                                    </span>
                                 </div>
                             </div>
-                            <button className="icon-btn" style={{ color: '#2962ff', backgroundColor: '#e3f2fd' }} disabled><FaUserShield /></button>
+                            <div style={{
+                                background: '#eff6ff',
+                                color: '#2563eb',
+                                padding: '10px',
+                                borderRadius: '50%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexShrink: 0
+                            }}>
+                                <FaUserShield size={20} />
+                            </div>
                         </div>
 
-                        {/* Team List */}
+                        {/* Team Members List */}
                         {teamMembers.map(member => (
-                            <div key={member.id} style={{
-                                backgroundColor: '#fff',
-                                padding: '15px',
-                                borderRadius: '8px',
-                                border: '1px solid #e0e0e0',
-                                marginBottom: '15px',
-                                boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'flex-start',
-                                transition: 'transform 0.2s',
-                            }}>
-                                <div>
-                                    <div style={{ fontWeight: 'bold', fontSize: '1.05em', color: '#37474f', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        {member.name}
-                                        <span style={{ height: '8px', width: '8px', backgroundColor: '#cfd8dc', borderRadius: '50%', display: 'inline-block' }}></span>
+                            <div
+                                key={member.id}
+                                style={{
+                                    backgroundColor: '#ffffff',
+                                    padding: '16px',
+                                    borderRadius: '12px',
+                                    border: '1px solid #e2e8f0',
+                                    marginBottom: '12px',
+                                    boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'flex-start',
+                                    gap: '10px'
+                                }}
+                            >
+                                <div style={{ minWidth: 0, flex: 1 }}>
+                                    <div style={{
+                                        fontWeight: '700',
+                                        fontSize: '1rem',
+                                        color: '#1e293b',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '8px'
+                                    }}>
+                                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                            {member.name}
+                                        </span>
+                                        <span style={{
+                                            height: '8px',
+                                            width: '8px',
+                                            backgroundColor: '#94a3b8',
+                                            borderRadius: '50%',
+                                            display: 'inline-block',
+                                            flexShrink: 0
+                                        }}></span>
                                     </div>
-                                    <div style={{ color: '#78909c', fontSize: '0.9em', marginTop: '4px' }}>{member.email}</div>
-                                    <div style={{ marginTop: '8px', display: 'flex', gap: '5px' }}>
-                                        <span style={{ backgroundColor: '#eceff1', color: '#455a64', padding: '4px 8px', borderRadius: '4px', fontSize: '0.75em', fontWeight: 'bold', textTransform: 'uppercase' }}>
+                                    <div style={{ color: '#64748b', fontSize: '0.85rem', marginTop: '3px', wordBreak: 'break-all' }}>
+                                        {member.email}
+                                    </div>
+                                    <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                        <span style={{
+                                            backgroundColor: '#f1f5f9',
+                                            color: '#334155',
+                                            padding: '3px 8px',
+                                            borderRadius: '6px',
+                                            fontSize: '0.75rem',
+                                            fontWeight: '700',
+                                            textTransform: 'uppercase'
+                                        }}>
                                             {member.role}
                                         </span>
-                                        <span style={{ fontSize: '0.75em', color: '#aaa', alignSelf: 'center' }}>
-                                            {member.password ? '•'.repeat(8) : ''}
-                                        </span>
+                                        {member.password && (
+                                            <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                                                Password: ••••••••
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
-                                <div style={{ display: 'flex', gap: '8px' }}>
+
+                                <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
                                     <button
                                         onClick={() => handleEdit(member)}
                                         style={{
-                                            background: '#e3f2fd',
-                                            border: 'none',
-                                            padding: '8px',
-                                            borderRadius: '6px',
+                                            background: '#eff6ff',
+                                            border: '1px solid #bfdbfe',
+                                            padding: '10px 12px',
+                                            borderRadius: '8px',
                                             cursor: 'pointer',
-                                            color: '#1976d2'
+                                            color: '#1d4ed8',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '6px',
+                                            fontSize: '0.82rem',
+                                            fontWeight: '600'
                                         }}
-                                        title="Edit"
-                                        aria-label="Edit"
+                                        title="Edit Member"
+                                        aria-label="Edit Member"
                                     >
-                                        <FaEdit />
+                                        <FaEdit size={14} /> <span>Edit</span>
                                     </button>
                                     <button
                                         onClick={() => handleDelete(member)}
                                         style={{
-                                            background: '#ffebee',
-                                            border: 'none',
-                                            padding: '8px',
-                                            borderRadius: '6px',
+                                            background: '#fef2f2',
+                                            border: '1px solid #fecaca',
+                                            padding: '10px 12px',
+                                            borderRadius: '8px',
                                             cursor: 'pointer',
-                                            color: '#c62828'
+                                            color: '#b91c1c',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '6px',
+                                            fontSize: '0.82rem',
+                                            fontWeight: '600'
                                         }}
-                                        title="Delete"
-                                        aria-label="Delete"
+                                        title="Delete Member"
+                                        aria-label="Delete Member"
                                     >
-                                        <FaTrash />
+                                        <FaTrash size={14} /> <span>Delete</span>
                                     </button>
                                 </div>
                             </div>
                         ))}
 
                         {teamMembers.length === 0 && (
-                            <div style={{ textAlign: 'center', color: '#b0bec5', padding: '20px', fontStyle: 'italic' }}>
-                                No team members added yet.
+                            <div style={{
+                                textAlign: 'center',
+                                color: '#64748b',
+                                padding: '40px 20px',
+                                backgroundColor: '#ffffff',
+                                borderRadius: '12px',
+                                border: '2px dashed #cbd5e1'
+                            }}>
+                                <FaUsers size={36} color="#94a3b8" style={{ marginBottom: '10px' }} />
+                                <div style={{ fontWeight: '600', fontSize: '1rem', color: '#334155' }}>
+                                    No team members added yet
+                                </div>
+                                <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '8px 0 16px' }}>
+                                    Add members so they can log in from their own devices and manage inventory.
+                                </p>
+                                <button
+                                    onClick={() => setActiveTab('form')}
+                                    style={{
+                                        backgroundColor: '#2563eb',
+                                        color: '#fff',
+                                        border: 'none',
+                                        borderRadius: '8px',
+                                        padding: '10px 18px',
+                                        fontSize: '0.9rem',
+                                        fontWeight: '600',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    + Add First Team Member
+                                </button>
                             </div>
                         )}
-
                     </div>
                 </div>
             </div>

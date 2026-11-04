@@ -122,27 +122,29 @@ export default function LogHistoryModal({ isOpen, onClose }) {
     }
 
     return (
-        <div className="modal-overlay" onClick={onClose} style={{ alignItems: 'flex-start', paddingTop: '50px' }}>
+        <div className="modal-overlay" onClick={onClose} style={{ alignItems: 'flex-start', padding: 0 }}>
             <div
                 className="modal-content"
                 onClick={e => e.stopPropagation()}
                 style={{
-                    width: '95%',
-                    height: '85vh',
-                    maxWidth: '1200px',
+                    width: '100vw',
+                    height: '100vh',
+                    maxWidth: 'none',
+                    maxHeight: 'none',
+                    borderRadius: 0,
                     margin: 0,
                     display: 'flex',
                     flexDirection: 'column',
-                    padding: '20px',
+                    padding: '16px',
                     backgroundColor: '#f4f6f8'
                 }}
             >
                 {/* Header */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                    <h2 style={{ margin: 0, color: '#2c3e50', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <h2 style={{ margin: 0, color: '#2c3e50', fontSize: '1.3rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <FaHistory /> Transaction Log History
                     </h2>
-                    <button onClick={onClose} className="icon-btn"><FaTimes /></button>
+                    <button onClick={onClose} className="btn-icon" style={{ background: '#e2e8f0', borderRadius: '50%', padding: '8px', display: 'flex' }}><FaTimes size={18} /></button>
                 </div>
 
                 {/* Toolbar */}
